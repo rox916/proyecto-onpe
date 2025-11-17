@@ -24,6 +24,7 @@ export default function Congresistas({
 
   // Estado: Array de IDs de congresistas seleccionados (máximo 2)
   const [votosSeleccionados, setVotosSeleccionados] = useState([]);
+  const [votoNuloSeleccionado, setVotoNuloSeleccionado] = useState(false);
   const [candidatoModal, setCandidatoModal] = useState(null);
   const [tabActiva, setTabActiva] = useState("perfil");
   const [confirmando, setConfirmando] = useState(false);
@@ -35,6 +36,7 @@ export default function Congresistas({
   // Reiniciar cuando cambia la categoría
   useEffect(() => {
     setVotosSeleccionados([]);
+    setVotoNuloSeleccionado(false);
     setCandidatoModal(null);
     setTabActiva("perfil");
     setErrorVoto(null);
@@ -65,6 +67,11 @@ export default function Congresistas({
   const handleCandidateSelect = (candidatoId, candidatoNombre) => {
     console.log(`Click en candidato ID: ${candidatoId}, nombre: ${candidatoNombre}`);
 
+    // Si se selecciona un candidato, deseleccionar voto nulo
+    if (votoNuloSeleccionado) {
+      setVotoNuloSeleccionado(false);
+    }
+
     const yaEstaSeleccionado = votosSeleccionados.includes(candidatoId);
 
     if (yaEstaSeleccionado) {
@@ -81,10 +88,25 @@ export default function Congresistas({
   const handleConfirmar = () => {
     console.log("=== DEBUG Congresistas handleConfirmar ===");
     console.log("votosSeleccionados:", votosSeleccionados);
+    console.log("votoNuloSeleccionado:", votoNuloSeleccionado);
     console.log("candidatos disponibles:", candidatos);
 
+    // Si se seleccionó voto nulo
+    if (votoNuloSeleccionado) {
+      setConfirmando(true);
+      const votoNulo = {
+        id: null,
+        nombre: "Voto Nulo / En Blanco",
+        esNulo: true,
+      };
+      console.log("Enviando voto nulo:", votoNulo);
+      onConfirmarVoto(votoNulo);
+      return;
+    }
+
+    // Si no hay candidatos seleccionados
     if (votosSeleccionados.length === 0) {
-      setErrorVoto("Debes seleccionar al menos 1 congresista para votar.");
+      setErrorVoto("Debes seleccionar al menos 1 congresista o voto nulo para votar.");
       return;
     }
 
@@ -120,14 +142,14 @@ export default function Congresistas({
   };
 
   const handleNuloSelect = () => {
-    console.log("Voto nulo seleccionado");
-    const votoNulo = {
-      id: null,
-      nombre: "Voto Nulo / En Blanco",
-      esNulo: true,
-    };
-    console.log("Enviando voto nulo:", votoNulo);
-    onConfirmarVoto(votoNulo);
+    console.log("Voto nulo seleccionado/deseleccionado");
+    // Si se selecciona voto nulo, limpiar selecciones de candidatos
+    if (!votoNuloSeleccionado) {
+      setVotosSeleccionados([]);
+      setVotoNuloSeleccionado(true);
+    } else {
+      setVotoNuloSeleccionado(false);
+    }
   };
 
   return (
@@ -198,7 +220,8 @@ export default function Congresistas({
             <p className="text-lg">No hay candidatos disponibles</p>
           </div>
         ) : (
-          candidatos.map((candidato) => {
+          <>
+          {candidatos.map((candidato) => {
             const estaSeleccionado = votosSeleccionados.includes(candidato.id);
 
             return (
@@ -330,25 +353,73 @@ export default function Congresistas({
                 </div>
               </motion.div>
             );
-          })
-        )}
-      </div>
+          })}
 
-      {/* BOTÓN VOTO NULO */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <motion.button
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleNuloSelect}
-          className={`flex-1 py-4 px-6 rounded-lg font-bold text-lg border-4 border-dashed transition-all ${
-            darkMode
-              ? "border-gray-600 bg-gray-800 hover:border-orange-500 text-orange-400"
-              : "border-gray-300 bg-white hover:border-orange-500 text-orange-600"
-          }`}
-        >
-          <span className="text-3xl mr-2">∅</span>
-          Voto Nulo / En Blanco
-        </motion.button>
+          {/* TARJETA DE VOTO NULO */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.03, y: -5 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={handleNuloSelect}
+            className={`group bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative ${
+              votoNuloSeleccionado
+                ? "border-orange-600 ring-4 ring-orange-200 shadow-orange-200"
+                : "border-2 border-dashed border-orange-400 hover:border-orange-600"
+            }`}
+          >
+            {votoNuloSeleccionado && (
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="absolute top-2 right-2 z-10"
+              >
+                <CheckCircle
+                  size={40}
+                  className="text-white bg-green-500 rounded-full"
+                  strokeWidth={3}
+                />
+              </motion.div>
+            )}
+
+            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
+            <div className="relative bg-gradient-to-br from-orange-100 to-orange-200 h-48 flex items-center justify-center">
+              <span className="text-7xl group-hover:scale-110 transition-transform duration-300">
+                ∅
+              </span>
+            </div>
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3">
+              <p className="text-white text-lg font-bold text-center leading-tight">
+                Voto Nulo / En Blanco
+              </p>
+            </div>
+            <div className="p-5 space-y-4 bg-white">
+              <div className="text-center border-b border-orange-200 pb-3">
+                <p className="text-base font-bold text-orange-600 uppercase tracking-wider">
+                  No me siento representado
+                </p>
+              </div>
+              <div className="border-t border-orange-200 pt-3">
+                <p className="text-sm font-bold text-gray-700 mb-1 uppercase">
+                  ¿QUÉ SIGNIFICA?
+                </p>
+                <div className="space-y-1">
+                  <p className="text-base text-gray-800 leading-snug pl-2">
+                    • Expresas tu derecho sin elegir
+                  </p>
+                  <p className="text-base text-gray-800 leading-snug pl-2">
+                    • Manifiestas descontento
+                  </p>
+                  <p className="text-base text-gray-800 leading-snug pl-2">
+                    • Tu voto será contabilizado
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+          </motion.div>
+          </>
+        )}
       </div>
 
       {/* INDICADOR DE SELECCIONES */}
@@ -357,7 +428,13 @@ export default function Congresistas({
           darkMode ? "text-gray-300" : "text-gray-700"
         }`}
       >
-        Seleccionados: <span className="text-blue-600">{votosSeleccionados.length}/2</span>
+        {votoNuloSeleccionado ? (
+          <span className="text-orange-600">Voto Nulo seleccionado</span>
+        ) : (
+          <>
+            Seleccionados: <span className="text-blue-600">{votosSeleccionados.length}/2</span>
+          </>
+        )}
       </div>
 
       {/* BOTONES DE NAVEGACIÓN */}
@@ -375,10 +452,10 @@ export default function Congresistas({
         </button>
 
         <button
-          disabled={votosSeleccionados.length === 0 || confirmando}
+          disabled={(!votoNuloSeleccionado && votosSeleccionados.length === 0) || confirmando}
           onClick={handleConfirmar}
           className={`flex items-center justify-center gap-3 w-full sm:w-auto bg-green-600 text-white font-bold text-lg py-4 px-10 rounded-lg shadow-lg transition-all transform ${
-            votosSeleccionados.length === 0
+            (!votoNuloSeleccionado && votosSeleccionados.length === 0)
               ? "opacity-50 cursor-not-allowed"
               : "hover:bg-green-700 hover:scale-105"
           }`}
@@ -386,6 +463,8 @@ export default function Congresistas({
           <CheckCircle className="w-6 h-6" />
           {confirmando
             ? "Confirmando..."
+            : votoNuloSeleccionado
+            ? "Confirmar Voto Nulo"
             : `Confirmar (${votosSeleccionados.length}/2)`}
         </button>
       </div>

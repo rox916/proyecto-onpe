@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Vote, Shield, AlertCircle, UserCheck, MapPin, ArrowLeft, Check, Loader } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // Importamos useNavigate
 import { useNavigate } from "react-router-dom";
 // Importamos la imagen del mapa
@@ -10,6 +10,11 @@ import {
   consultarVotantePorDni, 
   actualizarUbicacionVotante
 } from "../../services/votantesService";
+// Importamos el servicio de ubigeos (API)
+import { 
+  obtenerProvinciasPorDepartamento, 
+  obtenerDistritosPorProvincia 
+} from "../../services/ubigeosService";
 
 // Departamentos del Perú - Coordenadas ajustadas según tu mapa de referencia
 const DEPARTAMENTOS = [
@@ -50,9 +55,53 @@ export default function Verificacion() {
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState(null);
   const [distrito, setDistrito] = useState("");
   const [provincia, setProvincia] = useState("");
+  const [provinciasDisponibles, setProvinciasDisponibles] = useState([]);
+  const [distritosDisponibles, setDistritosDisponibles] = useState([]);
+  const [cargandoProvincias, setCargandoProvincias] = useState(false);
+  const [cargandoDistritos, setCargandoDistritos] = useState(false);
 
   // Inicializamos useNavigate
   const navigate = useNavigate();
+
+  // Cargar provincias cuando se selecciona un departamento desde la API
+  useEffect(() => {
+    if (departamentoSeleccionado) {
+      setCargandoProvincias(true);
+      setProvinciasDisponibles([]);
+      setProvincia("");
+      setDistrito("");
+      setDistritosDisponibles([]);
+      
+      obtenerProvinciasPorDepartamento(departamentoSeleccionado.nombre)
+        .then((provincias) => {
+          setProvinciasDisponibles(provincias);
+          setCargandoProvincias(false);
+        })
+        .catch((error) => {
+          console.error("Error al cargar provincias:", error);
+          setCargandoProvincias(false);
+        });
+    }
+  }, [departamentoSeleccionado]);
+
+  // Cargar distritos cuando se selecciona una provincia desde la API
+  useEffect(() => {
+    if (departamentoSeleccionado && provincia) {
+      setCargandoDistritos(true);
+      setDistritosDisponibles([]);
+      setDistrito("");
+      
+      obtenerDistritosPorProvincia(departamentoSeleccionado.nombre, provincia)
+        .then((distritos) => {
+          setDistritosDisponibles(distritos);
+          setCargandoDistritos(false);
+        })
+        .catch((error) => {
+          console.error("Error al cargar distritos:", error);
+          setCargandoDistritos(false);
+        });
+    }
+  }, [provincia, departamentoSeleccionado]);
 
   const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -101,8 +150,8 @@ export default function Verificacion() {
   };
 
   const procederAVerificacion = async () => {
-    if (!distrito.trim() || !provincia.trim()) {
-      setError("Debe completar todos los campos");
+    if (!distrito || !provincia) {
+      setError("Debe seleccionar provincia y distrito");
       return;
     }
 
@@ -234,9 +283,6 @@ export default function Verificacion() {
                       <UserCheck className="w-5 h-5 text-gray-400" />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 ml-6">
-                    DNIs de prueba: 12345678, 87654321, 11111111, 22222222, 33333333, 44444444, 55555555, 66666666, 77777777, 88888888, 99999999
-                  </p>
                 </div>
 
                 {error && (
@@ -336,6 +382,8 @@ export default function Verificacion() {
                     setDepartamentoSeleccionado(null);
                     setProvincia("");
                     setDistrito("");
+                    setProvinciasDisponibles([]);
+                    setDistritosDisponibles([]);
                     setStep(4);
                   }}
                   className="flex-1 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-105 uppercase tracking-wide shadow-lg"
@@ -508,6 +556,8 @@ export default function Verificacion() {
                         <button
                           onClick={() => {
                             setDepartamentoSeleccionado(dept);
+                            setProvincia("");
+                            setDistrito("");
                             setError("");
                           }}
                           className="pointer-events-auto flex flex-col items-center group -translate-x-1/2 -translate-y-1/2"
@@ -630,32 +680,68 @@ export default function Verificacion() {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Provincia
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={provincia}
                       onChange={(e) => {
                         setProvincia(e.target.value);
                         setError("");
                       }}
-                      placeholder="Ejemplo: Lima"
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none"
-                    />
+                      disabled={!departamentoSeleccionado || cargandoProvincias || provinciasDisponibles.length === 0}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {cargandoProvincias ? "Cargando provincias..." : "Seleccione una provincia"}
+                      </option>
+                      {provinciasDisponibles.map((prov) => (
+                        <option key={prov} value={prov}>
+                          {prov}
+                        </option>
+                      ))}
+                    </select>
+                    {!departamentoSeleccionado && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Primero debe seleccionar un departamento
+                      </p>
+                    )}
+                    {cargandoProvincias && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Cargando provincias desde la API...
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Distrito
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={distrito}
                       onChange={(e) => {
                         setDistrito(e.target.value);
                         setError("");
                       }}
-                      placeholder="Ejemplo: San Isidro"
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none"
-                    />
+                      disabled={!provincia || cargandoDistritos || distritosDisponibles.length === 0}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {cargandoDistritos ? "Cargando distritos..." : "Seleccione un distrito"}
+                      </option>
+                      {distritosDisponibles.map((dist) => (
+                        <option key={dist} value={dist}>
+                          {dist}
+                        </option>
+                      ))}
+                    </select>
+                    {!provincia && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Primero debe seleccionar una provincia
+                      </p>
+                    )}
+                    {cargandoDistritos && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Cargando distritos desde la API...
+                      </p>
+                    )}
                   </div>
 
                   {error && (
@@ -671,7 +757,7 @@ export default function Verificacion() {
 
                   <button
                     onClick={procederAVerificacion}
-                    disabled={!provincia.trim() || !distrito.trim() || loading}
+                    disabled={!provincia || !distrito || loading}
                     className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide shadow-lg flex items-center justify-center gap-2"
                   >
                     {loading ? (

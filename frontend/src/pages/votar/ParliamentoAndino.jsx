@@ -33,6 +33,7 @@ export default function ParliamentoAndino({
 
   // Estado simple: 1 candidato seleccionado (máximo 1 para Parlamento Andino)
   const [candidatoSeleccionado, setCandidatoSeleccionado] = useState(null);
+  const [votoNuloSeleccionado, setVotoNuloSeleccionado] = useState(false);
   const [errorVoto, setErrorVoto] = useState(null);
 
   // Modal para ver detalles
@@ -52,6 +53,7 @@ export default function ParliamentoAndino({
   // Resetear estado cuando cambia la categoría
   useEffect(() => {
     setCandidatoSeleccionado(null);
+    setVotoNuloSeleccionado(false);
     setErrorVoto(null);
     setCandidatoModal(null);
   }, [categoriaActual?.id]);
@@ -62,13 +64,30 @@ export default function ParliamentoAndino({
     console.log(
       `Click en candidato ID: ${candidato.id}, nombre: ${candidato.nombre}`
     );
+    // Si se selecciona un candidato, deseleccionar voto nulo
+    if (votoNuloSeleccionado) {
+      setVotoNuloSeleccionado(false);
+    }
     setCandidatoSeleccionado(candidato);
     setErrorVoto(null);
   };
 
   const handleConfirmar = () => {
+    // Si se seleccionó voto nulo
+    if (votoNuloSeleccionado) {
+      console.log("=== DEBUG ParliamentoAndino handleConfirmar - Voto Nulo ===");
+      const votoNulo = {
+        id: null,
+        nombre: "Voto Nulo / En Blanco",
+        esNulo: true,
+      };
+      console.log("Enviando voto nulo:", votoNulo);
+      onConfirmarVoto(votoNulo);
+      return;
+    }
+
     if (!candidatoSeleccionado) {
-      setErrorVoto("Debes seleccionar un representante para votar.");
+      setErrorVoto("Debes seleccionar un representante o voto nulo para votar.");
       return;
     }
 
@@ -92,12 +111,15 @@ export default function ParliamentoAndino({
   };
 
   const handleNuloSelect = () => {
-    console.log("Voto nulo seleccionado para Parlamento Andino");
-    const votoNulo = {
-      esNulo: true,
-      idCandidato: null,
-    };
-    onConfirmarVoto(votoNulo);
+    console.log("Voto nulo seleccionado/deseleccionado para Parlamento Andino");
+    // Si se selecciona voto nulo, limpiar selección de candidato
+    if (!votoNuloSeleccionado) {
+      setCandidatoSeleccionado(null);
+      setVotoNuloSeleccionado(true);
+    } else {
+      setVotoNuloSeleccionado(false);
+    }
+    setErrorVoto(null);
   };
 
   const abrirModal = (candidato) => {
@@ -305,7 +327,7 @@ export default function ParliamentoAndino({
               );
             })}
 
-            {/* Opción de Voto Nulo */}
+            {/* Tarjeta de Voto Nulo */}
             <motion.div
               variants={cardVariants}
               initial="hidden"
@@ -314,40 +336,63 @@ export default function ParliamentoAndino({
               whileHover={{ scale: 1.03, y: -5 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleNuloSelect}
-              className={`group bg-gradient-to-br rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative
-                border-2 border-dashed
+              className={`group bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative
                 ${
-                  darkMode
-                    ? "border-gray-700 hover:border-orange-400 from-gray-800 to-gray-900"
-                    : "border-gray-300 hover:border-orange-500 from-white to-gray-50"
+                  votoNuloSeleccionado
+                    ? "border-orange-600 ring-4 ring-orange-200 shadow-orange-200"
+                    : "border-2 border-dashed border-orange-400 hover:border-orange-600"
                 }
               `}
             >
-              <div className="h-48 flex items-center justify-center">
-                <span
-                  className={`text-7xl font-light ${
-                    darkMode ? "text-gray-600" : "text-gray-400"
-                  }`}
+              {votoNuloSeleccionado && (
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="absolute top-2 right-2 z-10"
                 >
+                  <CheckCircle
+                    size={40}
+                    className="text-white bg-green-500 rounded-full"
+                    strokeWidth={3}
+                  />
+                </motion.div>
+              )}
+
+              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
+              <div className="relative bg-gradient-to-br from-orange-100 to-orange-200 h-48 flex items-center justify-center">
+                <span className="text-7xl group-hover:scale-110 transition-transform duration-300">
                   ∅
                 </span>
               </div>
-
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3">
-                <p className="text-white text-lg font-bold text-center">
+                <p className="text-white text-lg font-bold text-center leading-tight">
                   Voto Nulo / En Blanco
                 </p>
               </div>
-
-              <div className={`p-5 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-                <p
-                  className={`text-center text-sm ${
-                    darkMode ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  Registrar un voto nulo o en blanco
-                </p>
+              <div className="p-5 space-y-4 bg-white">
+                <div className="text-center border-b border-orange-200 pb-3">
+                  <p className="text-base font-bold text-orange-600 uppercase tracking-wider">
+                    No me siento representado
+                  </p>
+                </div>
+                <div className="border-t border-orange-200 pt-3">
+                  <p className="text-sm font-bold text-gray-700 mb-1 uppercase">
+                    ¿QUÉ SIGNIFICA?
+                  </p>
+                  <div className="space-y-1">
+                    <p className="text-base text-gray-800 leading-snug pl-2">
+                      • Expresas tu derecho sin elegir
+                    </p>
+                    <p className="text-base text-gray-800 leading-snug pl-2">
+                      • Manifiestas descontento
+                    </p>
+                    <p className="text-base text-gray-800 leading-snug pl-2">
+                      • Tu voto será contabilizado
+                    </p>
+                  </div>
+                </div>
               </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
             </motion.div>
           </div>
         ) : (
@@ -384,7 +429,7 @@ export default function ParliamentoAndino({
           Volver a Categorías
         </button>
 
-        {candidatoSeleccionado && (
+        {(candidatoSeleccionado || votoNuloSeleccionado) && (
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -392,7 +437,7 @@ export default function ParliamentoAndino({
             className="flex items-center justify-center gap-2 font-bold py-3 px-8 rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:shadow-lg transition-all"
           >
             <CheckCircle className="w-5 h-5" />
-            Confirmar Voto
+            {votoNuloSeleccionado ? "Confirmar Voto Nulo" : "Confirmar Voto"}
           </motion.button>
         )}
       </div>
