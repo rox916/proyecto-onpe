@@ -1,9 +1,0 @@
-[phases.setup]
-nixPkgs = ["maven", "jdk21"]
-
-[phases.install]
-cmds = ["cd sistema-votacion-backend && mvn clean package -DskipTests"]
-
-[start]
-cmd = "cd sistema-votacion-backend && java -jar target/sistema-votacion-backend-0.0.1-SNAPSHOT.jar"
-
