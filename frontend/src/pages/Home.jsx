@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { Calendar, Users, Building2, Vote, FileSearch, CheckCircle2, Zap, Shield, Eye } from "lucide-react";
 
@@ -229,7 +230,7 @@ export default function Home() {
           className="absolute left-0 top-0 bottom-0 z-20 flex flex-col justify-center max-w-2xl px-12 text-white bg-gradient-to-r from-black/70 to-transparent"
         >
           <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 drop-shadow-lg">
-            Sistema Electoral Digital Nacional
+            Sistema Inteligente de Votación Peruana
           </h1>
           <p className="text-blue-100 text-lg mb-10 drop-shadow-md leading-relaxed">
             Participa en las Elecciones Generales 2026 del Perú. 

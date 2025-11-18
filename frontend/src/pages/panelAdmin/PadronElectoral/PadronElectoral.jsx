@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useRef } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import { ClipboardCheck, Search, Upload, Eye, Edit, UserCheck, UserX } from "lucide-react";
+import { ClipboardCheck, Search, Upload, Eye, UserCheck, UserX } from "lucide-react";
 import PadronSubir from "./PadronSubir";
 import PadronVer from "./PadronVer";
-import PadronEditar from "./PadronEditar";
 
 // Datos de ejemplo iniciales
 const initialPadron = [
@@ -18,11 +17,10 @@ const initialPadron = [
 ];
 
 export default function PadronElectoral() {
-  const [padron, setPadron] = useState(initialPadron);
+  const [padron] = useState(initialPadron);
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -43,30 +41,17 @@ export default function PadronElectoral() {
     setSelectedVoter(voter);
     setIsDetailsModalOpen(true);
   };
-  const handleOpenEditModal = (voter) => {
-    setSelectedVoter(voter);
-    setIsEditModalOpen(true);
-  };
   const handleCloseModals = () => {
     setIsUploadModalOpen(false);
     setIsDetailsModalOpen(false);
-    setIsEditModalOpen(false);
     setSelectedVoter(null);
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
-  const handleSaveStatus = (updatedVoter) => {
-    setPadron(padron.map((v) => (v.id === updatedVoter.id ? updatedVoter : v)));
-    handleCloseModals();
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-6"
-    >
-      {/* 🧭 Encabezado estandarizado */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      
+      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <ClipboardCheck className="w-8 h-8 text-blue-600" />
@@ -75,7 +60,7 @@ export default function PadronElectoral() {
               Gestión del Padrón Electoral
             </h1>
             <p className="text-sm text-gray-600">
-              Administra, consulta y actualiza el registro de votantes habilitados en el sistema.
+              Administra, consulta y visualiza el registro de votantes.
             </p>
           </div>
         </div>
@@ -90,7 +75,7 @@ export default function PadronElectoral() {
       {/* Búsqueda */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
             placeholder="Buscar por DNI, nombre, departamento o centro de votación..."
@@ -120,61 +105,55 @@ export default function PadronElectoral() {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <ClipboardCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 font-medium">No se encontraron votantes</p>
-                    <p className="text-sm text-gray-500 mt-1">Intenta ajustar los filtros de búsqueda</p>
                   </td>
                 </tr>
               ) : (
                 filteredPadron.map((voter) => (
-                <tr key={voter.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200 group">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{voter.nombre}</div>
-                    <div className="text-sm text-gray-500">DNI: {voter.dni}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {voter.distrito}, {voter.departamento}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{voter.centroVotacion}</div>
-                    <div className="text-xs">
-                      Mesa: <strong>{voter.mesa}</strong>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${
-                        voter.estado === "Votó"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {voter.estado === "Votó" ? (
-                        <UserCheck className="w-3 h-3" />
-                      ) : (
-                        <UserX className="w-3 h-3" />
-                      )}
-                      {voter.estado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <tr key={voter.id} className="hover:bg-blue-50 transition-all duration-200">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{voter.nombre}</div>
+                      <div className="text-sm text-gray-500">DNI: {voter.dni}</div>
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {voter.distrito}, {voter.departamento}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <div>{voter.centroVotacion}</div>
+                      <div className="text-xs">
+                        Mesa: <strong>{voter.mesa}</strong>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${
+                          voter.estado === "Votó"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {voter.estado === "Votó" ? (
+                          <UserCheck className="w-3 h-3" />
+                        ) : (
+                          <UserX className="w-3 h-3" />
+                        )}
+                        {voter.estado}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => handleOpenDetailsModal(voter)}
-                        className="p-2 text-gray-400 hover:text-white hover:bg-blue-500 rounded-lg transition-all duration-200 hover:scale-110"
+                        className="p-2 text-gray-400 hover:text-white hover:bg-blue-500 rounded-lg transition-all duration-200"
                         title="Ver Detalles"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={() => handleOpenEditModal(voter)}
-                        className="p-2 text-gray-400 hover:text-white hover:bg-yellow-500 rounded-lg transition-all duration-200 hover:scale-110"
-                        title="Editar Estado"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -187,16 +166,11 @@ export default function PadronElectoral() {
         onClose={handleCloseModals}
         fileInputRef={fileInputRef}
       />
+
       <PadronVer
         isOpen={isDetailsModalOpen}
         onClose={handleCloseModals}
         voter={selectedVoter}
-      />
-      <PadronEditar
-        isOpen={isEditModalOpen}
-        onClose={handleCloseModals}
-        voter={selectedVoter}
-        onSave={handleSaveStatus}
       />
     </motion.div>
   );

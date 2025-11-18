@@ -143,6 +143,14 @@ export default function AdminLogin() {
                 </>
               )}
             </button>
+            
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition-all mt-3 flex items-center justify-center gap-2"
+            >
+              Volver
+            </button>
           </form>
 
           {/* Información de seguridad */}

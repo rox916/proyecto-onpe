@@ -234,11 +234,6 @@ export default function Candidatos() {
     }
   };
 
-  // Función para cargar candidatos presidenciales (deshabilitada - ahora se usa la BD)
-  const handleLoadPresidenciales = () => {
-    alert("Esta función ya no está disponible. Los candidatos se cargan desde la base de datos.");
-  };
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCargo, setFilterCargo] = useState("Todos");
 
@@ -388,13 +383,7 @@ export default function Candidatos() {
           >
             <Search className="w-5 h-5" /> Actualizar Datos
           </button>
-          <button
-            onClick={handleLoadPresidenciales}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-md"
-            title="Cargar candidatos presidenciales"
-          >
-            <Plus className="w-5 h-5" /> Cargar Presidenciales
-          </button>
+
           <button
             onClick={() => setModalCreate(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md"

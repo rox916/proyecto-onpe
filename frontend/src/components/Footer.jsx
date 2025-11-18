@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Columna 1: Identidad */}
         <div>
           <h3 className="text-xl font-bold text-white mb-3">
-            Sistema Electoral Digital Nacional
+            Sistema Inteligente de Votación Peruana
           </h3>
           <p className="text-sm text-gray-400 leading-relaxed">
             Plataforma tecnológica orientada a garantizar procesos electorales

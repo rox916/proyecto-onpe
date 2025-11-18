@@ -11,6 +11,7 @@ import {
   Shield,         // Auditoría
   UserCheck,      // Padrón Electoral
   Brain,          // Análisis de Datos
+  Flag,           // Partidos
   KeyRound,       // Roles y Permisos
 } from 'lucide-react';
 
@@ -39,6 +40,7 @@ const AdminSidebar = ({ isCollapsed = false }) => {
       label: "Gestión Electoral",
       items: [
         { id: "candidatos", label: "Candidatos", icon: UserSquare2, path: "/admin/candidatos" },
+        { id: "partidos", label: "Partidos", icon: Flag, path: "/admin/partidos" },
         { id: "padron-electoral", label: "Padrón Electoral", icon: UserCheck, path: "/admin/padron-electoral" },
         { id: "centros", label: "Centros de Votación", icon: Building2, path: "/admin/centros" },
       ]

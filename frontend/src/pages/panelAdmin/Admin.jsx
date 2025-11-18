@@ -14,6 +14,7 @@ import RolesyPermisos from './RolesyPermisos/RolesyPermisos';
 
 // Gestión Electoral
 import Candidatos from './Candidatos/Candidatos';
+import Partidos from './Partidos/Partidos';
 import PadronElectoral from './PadronElectoral/PadronElectoral';
 import Centros from './Centros/Centros';
 
@@ -40,6 +41,7 @@ export default function Admin() {
 
         {/* Gestión Electoral */}
         <Route path="candidatos" element={<Candidatos />} />
+        <Route path="partidos" element={<Partidos />} />
         <Route path="padron-electoral" element={<PadronElectoral />} />
         <Route path="centros" element={<Centros />} />
 
