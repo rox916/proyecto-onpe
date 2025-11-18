@@ -1,12 +1,13 @@
 [build]
+# Forzamos Java 17 porque Railway lo soporta
 builder = "paketobuildpacks/builder:base"
 
-[build.args]
+[build.env]
 BP_JVM_VERSION = "17"
 
 [deploy]
-start = "java -jar sistema-votacion-backend/target/*.jar"
+start = "java -jar target/*.jar"
 
-[project]
-root = "sistema-votacion-backend"
+[experimental]
+src = "sistema-votacion-backend"
 
