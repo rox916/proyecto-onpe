@@ -644,21 +644,31 @@ export const fetchCandidatosParaVotacion = async () => {
 
     // Transformar parlamentarios andinos: modelo ParlamentoAndino (nombres, apellidos, id, fotoUrl, partidoPolitico)
     const andinosTransform = (andinos || []).map((c) => {
-      const nombreCompleto = `${c.nombres || ""} ${c.apellidos || ""}`.trim();
-      const idPartido = c.partidoPolitico?.idPartido || c.partidoPolitico?.id || null;
-      const partidoNombre = idPartido ? (partidosMap[idPartido] || "Sin partido") : "Sin partido";
-      
+      const nombreCompleto = c.nombres 
+        ? `${c.nombres} ${c.apellidos || ""}`.trim() 
+        : (c.nombre || "Candidato");
+
+      // Leemos directo del DTO
+      const nombrePartido = c.nombrePartido || c.partidoPolitico?.nombre || "Sin partido";
+      const logoPartido = c.imagenPartido || c.partidoPolitico?.simbolo || null;
+      const idPartido = c.idPartido || c.partidoPolitico?.idPartido;
+
       return {
         id: c.id,
         nombre: nombreCompleto,
         nombreCompleto: nombreCompleto,
+        
         partido: idPartido,
-        partidoNombre: partidoNombre,
-        partidoSimbolo: "",
+        partidoNombre: nombrePartido,
+        imagenPartido: logoPartido, // <--- Logo
+        partidoSimbolo: logoPartido,
+        
         numero: c.numeroEnLista || 0,
-        foto: c.fotoUrl || '',
-        propuestas: [],
+        foto: c.fotoUrl || c.foto || '',
+        propuestas: [], // Parlamento andino usualmente no lleva propuestas detalladas en la tarjeta
         biografia: '',
+        
+        cargo: "Parlamentario Andino"
       };
     });
 
