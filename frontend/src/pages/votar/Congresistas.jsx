@@ -6,7 +6,7 @@ import { useAccessibility } from "../../context/AccessibilityContext";
 // Importamos la función para traer los partidos reales desde la Base de Datos
 import { obtenerPartidosDesdeAPI } from "../../services/candidatosService";
 
-// Importa tus componentes (asegúrate que estén en la misma carpeta)
+// Importa tus componentes
 import CongresistaCard from "./CongresistaCard";
 import VotoNuloCard from "./VotoNuloCard";
 import DetalleModal from "./DetalleModal";
@@ -19,11 +19,11 @@ export default function Congresistas({
 }) {
   const { darkMode } = useAccessibility();
 
-  // Estado para la lista de partidos REALES de la base de datos
+  // Estado para la lista de partidos REALES
   const [listaPartidos, setListaPartidos] = useState([]);
   const [cargandoPartidos, setCargandoPartidos] = useState(true);
 
-  // Estado: Para saber qué partido estamos viendo (null = viendo lista de partidos)
+  // Estado: Para saber qué partido estamos viendo
   const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
 
   // Estados de votación
@@ -33,12 +33,11 @@ export default function Congresistas({
   const [confirmando, setConfirmando] = useState(false);
   const [errorVoto, setErrorVoto] = useState(null);
 
-  // --- EFECTO: Cargar los partidos desde la Base de Datos al iniciar ---
+  // --- EFECTO: Cargar los partidos ---
   useEffect(() => {
     const cargarPartidosDb = async () => {
       try {
         setCargandoPartidos(true);
-        // Llamamos a tu servicio existente que conecta con /api/partidos
         const data = await obtenerPartidosDesdeAPI();
         setListaPartidos(data);
       } catch (error) {
@@ -60,7 +59,7 @@ export default function Congresistas({
     setPartidoSeleccionado(null);
   }, [categoriaActual?.id, candidatos.length]);
 
-  // Limpiar errores automáticos
+  // Limpiar errores
   useEffect(() => {
     if (errorVoto) {
       const timer = setTimeout(() => setErrorVoto(null), 3000);
@@ -128,7 +127,6 @@ export default function Congresistas({
     }
   };
 
-  // Filtrar candidatos: Comparamos el ID del partido seleccionado con el ID del partido del candidato
   const candidatosVisibles = partidoSeleccionado 
     ? candidatos.filter(c => c.partido === partidoSeleccionado.idPartido)
     : [];
@@ -181,12 +179,30 @@ export default function Congresistas({
         )}
       </AnimatePresence>
 
-      {/* --- VISTA 1: GRID DE PARTIDOS REALES DE LA BD --- */}
+      {/* --- VISTA 1: GRID DE PARTIDOS --- */}
       {!partidoSeleccionado && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
+          
+          {/* AQUÍ ESTÁ EL TRUCO VISUAL (SKELETON LOADING) */}
           {cargandoPartidos ? (
-             <div className="col-span-full text-center py-12 text-gray-500">Cargando partidos...</div>
+             // Creamos 8 tarjetas falsas que parpadean
+             Array.from({ length: 8 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`rounded-xl p-6 flex flex-col items-center justify-center gap-4 border-2 animate-pulse ${
+                    darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+                  }`}
+                >
+                   {/* Círculo del Logo Falso */}
+                   <div className={`w-24 h-24 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                   {/* Barra de Texto Falsa */}
+                   <div className={`h-6 w-32 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                   {/* Botón Falso */}
+                   <div className={`h-8 w-20 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                </div>
+             ))
           ) : (
+            // Si ya cargó, mostramos los partidos reales
             listaPartidos.map((partido) => (
               <motion.div
                 key={partido.idPartido}
@@ -222,7 +238,7 @@ export default function Congresistas({
             ))
           )}
           
-          {/* Opción de Voto Nulo Directa */}
+          {/* Opción de Voto Nulo Directa (Solo sale cuando termina de cargar) */}
            {!cargandoPartidos && (
              <div className="col-span-1">
                <VotoNuloCard

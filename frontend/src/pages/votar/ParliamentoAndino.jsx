@@ -1,29 +1,15 @@
-// src/pages/votar/ParliamentoAndino.jsx
-
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeft,
-  X,
-  Eye,
-  User,
-  List,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAccessibility } from "../../context/AccessibilityContext";
 
-/**
- * ParliamentoAndino - Votación para Parlamento Andino (Simple)
- * 
- * Patrón: Igual que Congresistas
- * - Usa candidatos reales del backend (vía prop)
- * - Selección directa sin partidos intermedios
- * - Un candidato seleccionado
- * - Datos garantizados de la BD
- */
+// Reutilizamos la función de partidos y las tarjetas, ya que el diseño es igual
+import { obtenerPartidosDesdeAPI } from "../../services/candidatosService";
+import CongresistaCard from "./CongresistaCard"; 
+import VotoNuloCard from "./VotoNuloCard";
+import DetalleModal from "./DetalleModal";
 
-export default function ParliamentoAndino({
+export default function ParlamentoAndino({
   categoriaActual,
   onConfirmarVoto,
   onVolverCategorias,
@@ -31,142 +17,155 @@ export default function ParliamentoAndino({
 }) {
   const { darkMode } = useAccessibility();
 
-  // Estado simple: 1 candidato seleccionado (máximo 1 para Parlamento Andino)
-  const [candidatoSeleccionado, setCandidatoSeleccionado] = useState(null);
+  // Estado para la lista de partidos REALES de la base de datos
+  const [listaPartidos, setListaPartidos] = useState([]);
+  const [cargandoPartidos, setCargandoPartidos] = useState(true);
+
+  // Estado: Para saber qué partido estamos viendo
+  const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
+
+  // Estados de votación
+  const [votosSeleccionados, setVotosSeleccionados] = useState([]);
   const [votoNuloSeleccionado, setVotoNuloSeleccionado] = useState(false);
+  const [candidatoModal, setCandidatoModal] = useState(null);
+  const [confirmando, setConfirmando] = useState(false);
   const [errorVoto, setErrorVoto] = useState(null);
 
-  // Modal para ver detalles
-  const [candidatoModal, setCandidatoModal] = useState(null);
-  const [tabActiva, setTabActiva] = useState("perfil");
+  // --- EFECTO: Cargar los partidos desde la Base de Datos ---
+  useEffect(() => {
+    const cargarPartidosDb = async () => {
+      try {
+        setCargandoPartidos(true);
+        const data = await obtenerPartidosDesdeAPI();
+        setListaPartidos(data);
+      } catch (error) {
+        console.error("Error cargando partidos:", error);
+      } finally {
+        setCargandoPartidos(false);
+      }
+    };
 
-  // Limpiar error después de 3 segundos
+    cargarPartidosDb();
+  }, []);
+
+  // Reiniciar estado al cambiar categoría
+  useEffect(() => {
+    setVotosSeleccionados([]);
+    setVotoNuloSeleccionado(false);
+    setCandidatoModal(null);
+    setErrorVoto(null);
+    setPartidoSeleccionado(null);
+  }, [categoriaActual?.id, candidatos.length]);
+
+  // Limpiar errores automáticos
   useEffect(() => {
     if (errorVoto) {
-      const timer = setTimeout(() => {
-        setErrorVoto(null);
-      }, 3000);
+      const timer = setTimeout(() => setErrorVoto(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [errorVoto]);
 
-  // Resetear estado cuando cambia la categoría
-  useEffect(() => {
-    setCandidatoSeleccionado(null);
-    setVotoNuloSeleccionado(false);
-    setErrorVoto(null);
-    setCandidatoModal(null);
-  }, [categoriaActual?.id]);
+  // --- MANEJADORES DE VOTO ---
+  const handleCandidateSelect = (candidatoId, candidatoNombre) => {
+    if (votoNuloSeleccionado) setVotoNuloSeleccionado(false);
 
-  // === MANEJADORES ===
+    const yaEstaSeleccionado = votosSeleccionados.includes(candidatoId);
 
-  const handleCandidateSelect = (candidato) => {
-    console.log(
-      `Click en candidato ID: ${candidato.id}, nombre: ${candidato.nombre}`
-    );
-    // Si se selecciona un candidato, deseleccionar voto nulo
-    if (votoNuloSeleccionado) {
-      setVotoNuloSeleccionado(false);
+    if (yaEstaSeleccionado) {
+      setVotosSeleccionados(votosSeleccionados.filter(id => id !== candidatoId));
+    } else {
+      // Mismo límite: Máximo 2 votos preferenciales
+      if (votosSeleccionados.length < 2) {
+        setVotosSeleccionados([...votosSeleccionados, candidatoId]);
+      } else {
+        setErrorVoto("Solo puedes seleccionar hasta 2 representantes.");
+      }
     }
-    setCandidatoSeleccionado(candidato);
-    setErrorVoto(null);
-  };
-
-  const handleConfirmar = () => {
-    // Si se seleccionó voto nulo
-    if (votoNuloSeleccionado) {
-      console.log("=== DEBUG ParliamentoAndino handleConfirmar - Voto Nulo ===");
-      const votoNulo = {
-        id: null,
-        nombre: "Voto Nulo / En Blanco",
-        esNulo: true,
-      };
-      console.log("Enviando voto nulo:", votoNulo);
-      onConfirmarVoto(votoNulo);
-      return;
-    }
-
-    if (!candidatoSeleccionado) {
-      setErrorVoto("Debes seleccionar un representante o voto nulo para votar.");
-      return;
-    }
-
-    console.log("=== DEBUG ParliamentoAndino handleConfirmar ===");
-    console.log("Candidato seleccionado:", candidatoSeleccionado);
-
-    // Estructura del voto para Parlamento Andino (similar a Congresistas pero sin preferenciales)
-    const votoParliamento = {
-      id: candidatoSeleccionado.id,
-      nombre: candidatoSeleccionado.nombre,
-      partidoNombre: candidatoSeleccionado.partidoNombre,
-      numeroLista: candidatoSeleccionado.numero,
-      // Incluir objeto completo para referencia del backend
-      candidato: candidatoSeleccionado,
-    };
-
-    console.log("=== VOTO PARLAMENTO ANDINO A ENVIAR ===");
-    console.log(votoParliamento);
-
-    onConfirmarVoto(votoParliamento);
   };
 
   const handleNuloSelect = () => {
-    console.log("Voto nulo seleccionado/deseleccionado para Parlamento Andino");
-    // Si se selecciona voto nulo, limpiar selección de candidato
     if (!votoNuloSeleccionado) {
-      setCandidatoSeleccionado(null);
+      setVotosSeleccionados([]);
       setVotoNuloSeleccionado(true);
     } else {
       setVotoNuloSeleccionado(false);
     }
-    setErrorVoto(null);
   };
 
-  const abrirModal = (candidato) => {
-    setCandidatoModal(candidato);
-    setTabActiva("perfil");
+  const handleConfirmar = () => {
+    if (votoNuloSeleccionado) {
+      setConfirmando(true);
+      onConfirmarVoto({ id: null, nombre: "Voto Nulo / En Blanco", esNulo: true });
+      return;
+    }
+
+    if (votosSeleccionados.length === 0) {
+      setErrorVoto("Debes seleccionar al menos 1 candidato o voto nulo.");
+      return;
+    }
+
+    setConfirmando(true);
+    const candidatosSeleccionados = candidatos.filter(c => votosSeleccionados.includes(c.id));
+
+    if (candidatosSeleccionados.length > 0) {
+      const primero = candidatosSeleccionados[0];
+      // Construimos el objeto de voto para Parlamento Andino
+      const votoAndino = {
+        id: primero.id,
+        nombre: primero.nombre || primero.nombres,
+        partidoNombre: primero.partidoNombre,
+        foto: primero.foto || primero.fotoUrl,
+        // En andino no hay "distrito" (es distrito único nacional), pero lo dejamos por compatibilidad
+        distrito: "Nacional", 
+        preferenciales: votosSeleccionados,
+        candidatos: candidatosSeleccionados,
+        cargo: "Parlamento Andino"
+      };
+      onConfirmarVoto(votoAndino);
+    } else {
+      setConfirmando(false);
+    }
   };
 
-  const cerrarModal = () => {
-    setCandidatoModal(null);
-  };
+  // Filtrar candidatos por partido seleccionado
+  const candidatosVisibles = partidoSeleccionado 
+    ? candidatos.filter(c => c.partido === partidoSeleccionado.idPartido)
+    : [];
 
-  // === ANIMACIONES ===
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 30, scale: 0.98 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.4, ease: "easeOut" },
-    },
+  const fadeUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="w-full"
+      key="paso4-andino"
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, x: -20 }}
+      variants={fadeUp}
+      className={`rounded-2xl shadow-2xl p-8 min-h-screen border ${darkMode ? "bg-gray-900 border-gray-700" : "bg-gradient-to-br from-white to-gray-50 border-gray-100"}`}
     >
-      {/* === ENCABEZADO === */}
-      <div className={`rounded-2xl shadow-lg p-8 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-        <h2
-          className={`text-4xl font-bold mb-2 ${
-            darkMode ? "text-blue-300" : "text-blue-800"
-          }`}
-        >
-          Parlamento Andino
-        </h2>
-        <p
-          className={`text-xl ${darkMode ? "text-gray-300" : "text-gray-600"}`}
-        >
-          Selecciona a tu representante en el Parlamento Andino
-        </p>
+      {/* HEADER */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${categoriaActual.color} flex items-center justify-center text-xl`}>
+            <categoriaActual.icono className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className={`text-3xl font-bold ${darkMode ? "text-white" : "bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent"}`}>
+              {categoriaActual.titulo}
+            </h2>
+            <p className={`text-base font-semibold ${darkMode ? "text-gray-400" : "text-gray-700"}`}>
+              {partidoSeleccionado 
+                ? `Candidatos de ${partidoSeleccionado.nombre}`
+                : "Selecciona un Partido Político"}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* === MENSAJE DE ERROR FLOTANTE === */}
+      {/* MENSAJE ERROR */}
       <AnimatePresence>
         {errorVoto && (
           <motion.div
@@ -181,445 +180,136 @@ export default function ParliamentoAndino({
         )}
       </AnimatePresence>
 
-      {/* === GRID DE CANDIDATOS === */}
-      <div className="mt-8">
-        <p
-          className={`text-xl font-semibold mb-6 ${
-            darkMode ? "text-white" : "text-gray-800"
-          }`}
-        >
-          Selecciona un representante:
-        </p>
-
-        {candidatos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {candidatos.map((candidato) => {
-              const estaSeleccionado = candidatoSeleccionado?.id === candidato.id;
-
-              return (
-                <motion.div
-                  key={candidato.id}
-                  variants={cardVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.3 }}
-                  whileHover={{ scale: 1.03, y: -5 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleCandidateSelect(candidato)}
-                  className={`group bg-gradient-to-br rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative
-                    ${
-                      estaSeleccionado
-                        ? "border-blue-500 ring-4 ring-blue-200 shadow-blue-200"
-                        : `border-2 ${
-                            darkMode
-                              ? "border-gray-700 hover:border-blue-600"
-                              : "border-gray-300 hover:border-blue-400"
-                          }`
-                    }
-                    ${darkMode ? "from-gray-800 to-gray-900" : "from-white to-gray-50"}
-                  `}
-                >
-                  {/* Checkmark si está seleccionado */}
-                  {estaSeleccionado && (
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="absolute top-2 right-2 z-10"
-                    >
-                      <CheckCircle
-                        size={40}
-                        className="text-white bg-green-500 rounded-full"
-                        strokeWidth={3}
-                      />
-                    </motion.div>
-                  )}
-
-                  {/* Foto */}
-                  <div
-                    className={`relative ${
-                      darkMode ? "bg-gray-700" : "bg-gradient-to-br from-gray-200 to-gray-300"
-                    } overflow-hidden h-48`}
-                  >
-                    <img
-                      src={candidato.foto}
-                      alt={candidato.nombre}
-                      className={`w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-300 ${
-                        estaSeleccionado ? "" : "grayscale group-hover:grayscale-0"
-                      }`}
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                      }}
+      {/* --- VISTA 1: GRID DE PARTIDOS --- */}
+      {!partidoSeleccionado && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
+          {cargandoPartidos ? (
+             <div className="col-span-full text-center py-12 text-gray-500">Cargando partidos...</div>
+          ) : (
+            listaPartidos.map((partido) => (
+              <motion.div
+                key={partido.idPartido}
+                whileHover={{ scale: 1.05, y: -5 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setPartidoSeleccionado(partido)}
+                className={`cursor-pointer rounded-xl p-6 flex flex-col items-center justify-center gap-4 border-2 transition-all shadow-md ${
+                  darkMode 
+                    ? "bg-gray-800 border-gray-700 hover:border-blue-500" 
+                    : "bg-white border-gray-200 hover:border-blue-500 hover:shadow-xl"
+                }`}
+              >
+                <div className="w-24 h-24 relative flex items-center justify-center">
+                  {partido.simbolo ? (
+                    <img 
+                      src={partido.simbolo} 
+                      alt={partido.nombre} 
+                      className="w-full h-full object-contain"
                     />
-                  </div>
-
-                  {/* Nombre */}
-                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
-                    <p
-                      className="text-white text-lg font-bold text-center leading-tight truncate"
-                      title={candidato.nombre}
-                    >
-                      {candidato.nombre}
-                    </p>
-                  </div>
-
-                  {/* Información */}
-                  <div className={`p-5 space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-                    {/* Partido */}
-                    <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                        {candidato.partidoNombre || "Sin partido"}
-                      </p>
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold text-xs">
+                      SIN LOGO
                     </div>
-
-                    {/* Propuestas */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                      <p
-                        className={`text-sm font-bold mb-1 uppercase ${
-                          darkMode ? "text-gray-400" : "text-gray-700"
-                        }`}
-                      >
-                        PROPUESTAS:
-                      </p>
-                      <div className="space-y-1">
-                        {candidato.propuestas &&
-                          candidato.propuestas.slice(0, 2).map((propuesta, i) => (
-                            <p
-                              key={i}
-                              className={`text-sm leading-snug pl-2 ${
-                                darkMode ? "text-gray-300" : "text-gray-800"
-                              }`}
-                            >
-                              • {propuesta}
-                            </p>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Botón Ver Detalles */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirModal(candidato);
-                        }}
-                        className={`flex items-center justify-center gap-2 w-full font-bold py-3 px-5 rounded-lg transition-colors text-base
-                          ${
-                            darkMode
-                              ? "bg-gray-700 hover:bg-gray-600 text-blue-300"
-                              : "bg-blue-500 hover:bg-blue-600 text-white"
-                          }
-                        `}
-                      >
-                        <Eye className="w-5 h-5" />
-                        Ver Detalles
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Línea de hover */}
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-                </motion.div>
-              );
-            })}
-
-            {/* Tarjeta de Voto Nulo */}
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={handleNuloSelect}
-              className={`group bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-2xl relative
-                ${
-                  votoNuloSeleccionado
-                    ? "border-orange-600 ring-4 ring-orange-200 shadow-orange-200"
-                    : "border-2 border-dashed border-orange-400 hover:border-orange-600"
-                }
-              `}
-            >
-              {votoNuloSeleccionado && (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="absolute top-2 right-2 z-10"
-                >
-                  <CheckCircle
-                    size={40}
-                    className="text-white bg-green-500 rounded-full"
-                    strokeWidth={3}
-                  />
-                </motion.div>
-              )}
-
-              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
-              <div className="relative bg-gradient-to-br from-orange-100 to-orange-200 h-48 flex items-center justify-center">
-                <span className="text-7xl group-hover:scale-110 transition-transform duration-300">
-                  ∅
-                </span>
-              </div>
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3">
-                <p className="text-white text-lg font-bold text-center leading-tight">
-                  Voto Nulo / En Blanco
-                </p>
-              </div>
-              <div className="p-5 space-y-4 bg-white">
-                <div className="text-center border-b border-orange-200 pb-3">
-                  <p className="text-base font-bold text-orange-600 uppercase tracking-wider">
-                    No me siento representado
-                  </p>
+                  )}
                 </div>
-                <div className="border-t border-orange-200 pt-3">
-                  <p className="text-sm font-bold text-gray-700 mb-1 uppercase">
-                    ¿QUÉ SIGNIFICA?
-                  </p>
-                  <div className="space-y-1">
-                    <p className="text-base text-gray-800 leading-snug pl-2">
-                      • Expresas tu derecho sin elegir
-                    </p>
-                    <p className="text-base text-gray-800 leading-snug pl-2">
-                      • Manifiestas descontento
-                    </p>
-                    <p className="text-base text-gray-800 leading-snug pl-2">
-                      • Tu voto será contabilizado
-                    </p>
-                  </div>
+                <h3 className={`text-center font-bold text-lg leading-tight ${darkMode ? "text-white" : "text-gray-800"}`}>
+                  {partido.nombre}
+                </h3>
+                <div className={`text-xs px-3 py-1 rounded-full ${darkMode ? "bg-gray-700 text-blue-300" : "bg-blue-50 text-blue-600"}`}>
+                  Ver Lista
                 </div>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-            </motion.div>
-          </div>
-        ) : (
-          <div
-            className={`p-8 rounded-lg text-center ${
-              darkMode ? "bg-gray-800" : "bg-gray-100"
-            }`}
-          >
-            <p
-              className={`text-lg ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-            >
-              No hay candidatos disponibles para Parlamento Andino
-            </p>
-          </div>
-        )}
-      </div>
+              </motion.div>
+            ))
+          )}
+          
+          {/* Opción de Voto Nulo Directa */}
+           {!cargandoPartidos && (
+             <div className="col-span-1">
+               <VotoNuloCard
+                seleccionado={votoNuloSeleccionado}
+                onSelect={handleNuloSelect}
+              />
+             </div>
+           )}
+        </div>
+      )}
 
-      {/* === BOTONES DE CONTROL === */}
-      <div className="flex flex-col-reverse sm:flex-row justify-between items-center mt-12 gap-4">
+      {/* --- VISTA 2: GRID DE CANDIDATOS --- */}
+      {partidoSeleccionado && (
+        <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-12"
+        >
+            <button 
+                onClick={() => setPartidoSeleccionado(null)}
+                className={`mb-6 flex items-center gap-2 font-bold px-4 py-2 rounded-lg transition-colors ${
+                    darkMode ? "text-blue-300 hover:bg-gray-800" : "text-blue-600 hover:bg-blue-50"
+                }`}
+            >
+                <ArrowLeft className="w-5 h-5" />
+                Elegir otro partido
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {candidatosVisibles.length === 0 ? (
+                    <div className={`col-span-full text-center py-12 rounded-xl border-2 border-dashed ${darkMode ? "border-gray-700 text-gray-400" : "border-gray-300 text-gray-500"}`}>
+                        <p className="text-xl font-semibold mb-2">Sin lista registrada.</p>
+                        <p className="text-sm">Este partido no tiene candidatos al Parlamento Andino.</p>
+                    </div>
+                ) : (
+                    candidatosVisibles.map((candidato) => (
+                    // Reutilizamos CongresistaCard porque visualmente es igual (Foto + Nombre + Número)
+                    <CongresistaCard
+                        key={candidato.id}
+                        candidato={candidato}
+                        estaSeleccionado={votosSeleccionados.includes(candidato.id)}
+                        onSelect={handleCandidateSelect}
+                        onVerDetalles={setCandidatoModal}
+                        darkMode={darkMode}
+                    />
+                    ))
+                )}
+            </div>
+        </motion.div>
+      )}
+
+      {/* FOOTER */}
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 border-t pt-6 mt-6 border-gray-200 dark:border-gray-700">
         <button
           onClick={onVolverCategorias}
-          className={`
-            flex items-center justify-center gap-2
-            font-bold py-3 px-6 rounded-lg 
-            transition-all duration-200
-            ${
-              darkMode
-                ? "text-gray-300 hover:text-white hover:bg-gray-700"
-                : "text-gray-700 hover:text-blue-600 hover:bg-gray-200"
-            }
-          `}
+          className={`flex items-center justify-center gap-2 font-bold py-3 px-6 rounded-lg transition-all ${darkMode ? "text-gray-300 hover:text-white hover:bg-gray-700" : "text-gray-700 hover:text-blue-600 hover:bg-gray-200"}`}
         >
-          <ArrowLeft className="w-5 h-5" />
-          Volver a Categorías
+          <ArrowLeft className="w-5 h-5" /> Volver al Inicio
         </button>
 
-        {(candidatoSeleccionado || votoNuloSeleccionado) && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={handleConfirmar}
-            className="flex items-center justify-center gap-2 font-bold py-3 px-8 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg transition-all"
-          >
-            <CheckCircle className="w-5 h-5" />
-            {votoNuloSeleccionado ? "Confirmar Voto Nulo" : "Confirmar Voto"}
-          </motion.button>
-        )}
+        <div className="text-center">
+            {votoNuloSeleccionado ? (
+            <span className="text-orange-600 font-bold text-lg">Voto Nulo seleccionado</span>
+            ) : (
+            <span className={`font-semibold text-lg ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                Seleccionados: <span className="text-blue-600 text-xl font-bold">{votosSeleccionados.length}/2</span>
+            </span>
+            )}
+        </div>
+
+        <button
+          disabled={(!votoNuloSeleccionado && votosSeleccionados.length === 0) || confirmando}
+          onClick={handleConfirmar}
+          className={`flex items-center justify-center gap-3 w-full sm:w-auto bg-green-600 text-white font-bold text-lg py-4 px-10 rounded-lg shadow-lg transition-all transform ${(!votoNuloSeleccionado && votosSeleccionados.length === 0) ? "opacity-50 cursor-not-allowed" : "hover:bg-green-700 hover:scale-105"}`}
+        >
+          <CheckCircle className="w-6 h-6" />
+          {confirmando ? "Enviando..." : "Confirmar Voto"}
+        </button>
       </div>
 
-      {/* === MODAL DE DETALLES === */}
-      <AnimatePresence>
-        {candidatoModal && (
-          <motion.div
-            key="modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
-            onClick={cerrarModal}
-          />
-        )}
-        {candidatoModal && (
-          <motion.div
-            key="modal-wrapper"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={cerrarModal}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 50 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className={`relative max-w-4xl w-full max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row ${
-                darkMode ? "bg-gray-800" : "bg-white"
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Botón cerrar */}
-              <button
-                onClick={cerrarModal}
-                className={`absolute top-4 right-4 transition-colors z-10 ${
-                  darkMode
-                    ? "text-gray-400 hover:text-white"
-                    : "text-gray-500 hover:text-gray-900"
-                }`}
-              >
-                <X size={28} />
-              </button>
-
-              {/* Foto (lado izquierdo) */}
-              <div
-                className={`w-full md:w-1/3 flex-shrink-0 ${
-                  darkMode ? "bg-gray-700" : "bg-gray-100"
-                }`}
-              >
-                <img
-                  src={candidatoModal.foto}
-                  alt={candidatoModal.nombre}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
-                />
-              </div>
-
-              {/* Contenido (lado derecho) */}
-              <div className="w-full md:w-2/3 flex flex-col overflow-y-auto">
-                {/* Encabezado del modal */}
-                <div
-                  className={`px-8 pt-8 pb-4 border-b ${
-                    darkMode
-                      ? "border-gray-700 bg-gray-800"
-                      : "border-gray-200 bg-gray-50/50"
-                  }`}
-                >
-                  <h2
-                    className={`text-4xl font-bold ${
-                      darkMode ? "text-blue-300" : "text-blue-800"
-                    }`}
-                  >
-                    {candidatoModal.nombre}
-                  </h2>
-                  <p
-                    className={`text-lg mt-2 font-semibold ${
-                      darkMode ? "text-gray-300" : "text-gray-700"
-                    }`}
-                  >
-                    {candidatoModal.partidoNombre || "Sin partido"}
-                  </p>
-
-                  {/* Tabs */}
-                  <nav className="flex gap-2 mt-6">
-                    <button
-                      onClick={() => setTabActiva("perfil")}
-                      className={`flex items-center gap-2 py-3 px-6 rounded-t-lg text-base font-semibold transition-colors
-                        ${
-                          tabActiva === "perfil"
-                            ? `${
-                                darkMode
-                                  ? "bg-gray-800 text-blue-300"
-                                  : "bg-white text-blue-700"
-                              } shadow-sm`
-                            : `${
-                                darkMode
-                                  ? "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`
-                        }`}
-                    >
-                      <User className="w-5 h-5" /> Perfil
-                    </button>
-                    <button
-                      onClick={() => setTabActiva("propuestas")}
-                      className={`flex items-center gap-2 py-3 px-6 rounded-t-lg text-base font-semibold transition-colors
-                        ${
-                          tabActiva === "propuestas"
-                            ? `${
-                                darkMode
-                                  ? "bg-gray-800 text-blue-300"
-                                  : "bg-white text-blue-700"
-                              } shadow-sm`
-                            : `${
-                                darkMode
-                                  ? "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`
-                        }`}
-                    >
-                      <List className="w-5 h-5" /> Propuestas
-                    </button>
-                  </nav>
-                </div>
-
-                {/* Contenido de tabs */}
-                <div className="p-8">
-                  {tabActiva === "perfil" && (
-                    <motion.div
-                      key="perfil"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <h3
-                        className={`text-2xl font-bold mb-3 ${
-                          darkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Biografía
-                      </h3>
-                      <p
-                        className={`text-lg leading-relaxed ${
-                          darkMode ? "text-gray-300" : "text-gray-800"
-                        }`}
-                      >
-                        {candidatoModal.biografia ||
-                          "Información biográfica no disponible."}
-                      </p>
-                    </motion.div>
-                  )}
-                  {tabActiva === "propuestas" && (
-                    <motion.div
-                      key="propuestas"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <h3
-                        className={`text-2xl font-bold mb-3 ${
-                          darkMode ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        Propuestas Clave
-                      </h3>
-                      <ul
-                        className={`list-disc list-inside text-lg space-y-3 ${
-                          darkMode ? "text-gray-300" : "text-gray-800"
-                        }`}
-                      >
-                        {candidatoModal.propuestas &&
-                          candidatoModal.propuestas.map((prop, i) => (
-                            <li key={i}>{prop}</li>
-                          ))}
-                      </ul>
-                    </motion.div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modal Detalles */}
+      {candidatoModal && (
+        <DetalleModal
+          candidato={candidatoModal}
+          onClose={() => setCandidatoModal(null)}
+          darkMode={darkMode}
+        />
+      )}
     </motion.div>
   );
 }

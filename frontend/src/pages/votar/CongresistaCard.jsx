@@ -8,15 +8,23 @@ export default function CongresistaCard({
   onVerDetalles, 
   darkMode 
 }) {
+  // --- IMAGEN POR DEFECTO ---
+  // Asegúrate de guardar tu imagen 'congresista.jpg' como 'default_congresista.jpg'
+  // en la carpeta: frontend/public/images/
+  const DEFAULT_IMAGE = "/images/default_congresista.jpg";
 
-    console.log("DATOS DE " + candidato.nombres, candidato);
-  // Normalización de datos (para evitar errores si el backend cambia nombres)
+  // --- NORMALIZACIÓN DE DATOS ---
+  // Esto permite que la tarjeta funcione con cualquier tipo de candidato (Presidente, Congresista, Andino)
   const foto = candidato.fotoUrl || candidato.foto;
-  const nombre = candidato.nombres || candidato.nombre;
+  const nombre = candidato.nombres || candidato.nombre || "Candidato";
   const apellidos = candidato.apellidos || "";
   const partido = candidato.nombrePartido || candidato.partidoNombre || "Sin partido";
-  const logoPartido = candidato.imagenPartido || candidato.partidoLogo;
-  const distrito = candidato.region || candidato.distrito || "N/A";
+  
+  // Detecta el logo donde sea que venga
+  const logoPartido = candidato.imagenPartido || candidato.partidoLogo || candidato.partidoSimbolo;
+  
+  // Si no tiene región (ej. Parlamento Andino), mostramos "Nacional"
+  const distrito = candidato.region || candidato.distrito || "Nacional";
 
   return (
     <motion.div
@@ -31,7 +39,7 @@ export default function CongresistaCard({
           : `border-2 ${darkMode ? "border-gray-700 bg-gray-800 hover:border-blue-500" : "border-gray-300 bg-white hover:border-blue-500"}`
       }`}
     >
-      {/* Icono de Check */}
+      {/* Icono de Check (Solo si está seleccionado) */}
       {estaSeleccionado && (
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -42,13 +50,20 @@ export default function CongresistaCard({
         </motion.div>
       )}
 
-      {/* Foto */}
+      {/* FOTO DEL CANDIDATO (Con Fallback Inteligente) */}
       <div className={`relative h-56 overflow-hidden ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>
         <img
-          src={foto}
+          // 1. Usa la foto real, si no existe usa el default
+          src={foto || DEFAULT_IMAGE}
           alt={nombre}
-          className={`w-full h-full object-cover object-top transition-all ${estaSeleccionado ? "" : "grayscale hover:grayscale-0"}`}
-          onError={(e) => (e.target.style.display = "none")}
+          className={`w-full h-full object-cover object-top transition-all ${
+            estaSeleccionado ? "" : "grayscale hover:grayscale-0"
+          }`}
+          // 2. Si la foto real da error 404, cambia al default automáticamente
+          onError={(e) => {
+            e.target.onerror = null; // Previene bucles
+            e.target.src = DEFAULT_IMAGE;
+          }}
         />
       </div>
 
@@ -61,6 +76,8 @@ export default function CongresistaCard({
 
       {/* Info */}
       <div className={`p-4 space-y-3 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+        
+        {/* Distrito / Región */}
         <div className="text-center">
           <span className={`inline-block px-3 py-2 rounded-md text-sm font-semibold ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-700"}`}>
             {distrito}
@@ -69,11 +86,19 @@ export default function CongresistaCard({
 
         {/* Logo y Nombre del Partido */}
         <div className="flex flex-col items-center justify-center gap-2">
-          {logoPartido && (
+          {logoPartido ? (
             <div className="h-10 w-full flex items-center justify-center">
-              <img src={logoPartido} alt="Partido" className="h-full object-contain" />
+              <img 
+                src={logoPartido} 
+                alt="Partido" 
+                className="h-full object-contain" 
+                onError={(e) => e.target.style.display = 'none'} // Ocultar si falla el logo
+              />
             </div>
+          ) : (
+             <span className="text-xs text-gray-400 font-bold">SIN LOGO</span>
           )}
+          
           <p className={`text-sm font-bold uppercase text-center ${darkMode ? "text-blue-300" : "text-blue-700"}`}>
             {partido}
           </p>
@@ -85,11 +110,17 @@ export default function CongresistaCard({
             Propuestas:
           </p>
           <div className="space-y-1">
-            {(candidato.propuestas || []).slice(0, 2).map((prop, i) => (
-              <p key={i} className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                • {prop}
-              </p>
-            ))}
+            {(candidato.propuestas && candidato.propuestas.length > 0) ? (
+                candidato.propuestas.slice(0, 2).map((prop, i) => (
+                  <p key={i} className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    • {prop}
+                  </p>
+                ))
+            ) : (
+                <p className={`text-xs italic ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                    No hay propuestas registradas.
+                </p>
+            )}
           </div>
         </div>
 
