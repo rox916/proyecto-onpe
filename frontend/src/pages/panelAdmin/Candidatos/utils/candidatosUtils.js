@@ -1,57 +1,39 @@
 /**
  * Utilidades compartidas para los componentes de candidatos
+ * CORREGIDO: Usa rutas estáticas a /public/images/ y /public/logos/
  */
 
-import fotoRLA from "../../../../assets/images/rafael_lopez_aliaga.jpg";
-import fotoKeiko from "../../../../assets/images/keiko_fujimori.jpg";
-import fotoAcuna from "../../../../assets/images/cesar_acuna.jpg";
-import fotoAlvarez from "../../../../assets/images/carlos_alvarez.jpg";
-import fotoLopezChau from "../../../../assets/images/alfonso_lopez_chau.jpg";
-import fotoButters from "../../../../assets/images/phillip_butters.jpg";
-import fotoPerezTello from "../../../../assets/images/marisol_perez_tello.jpg";
-import fotoNormaYarrow from "../../../../assets/images/norma_yarrow_lumbreras.jpg";
-import fotoJoseCueto from "../../../../assets/images/jose_cueto_aservi.jpg";
-import fotoJorgeMontoya from "../../../../assets/images/jorge_montoya_manrique.jpg";
-import fotoJulioChavez from "../../../../assets/images/Julio_Chavez.jpg";
-
-import logoRenovacion from "../../../../assets/logos/renovacion_popular.png";
-import logoFuerza from "../../../../assets/logos/fuerza_popular.png";
-import logoAPP from "../../../../assets/logos/app.png";
-import logoPaisTodos from "../../../../assets/logos/pais_para_todos.png";
-import logoAhoraNacion from "../../../../assets/logos/ahora_nacion.png";
-import logoAvanza from "../../../../assets/logos/avanza_pais.png";
-import logoPrimeroGente from "../../../../assets/logos/primero_la_gente.png";
-import logoAccionPopular from "../../../../assets/logos/accion-popular.png";
 import { LOGOS_PARTIDOS } from "../../../../constants/electoralConstants";
 
-// Mapa de fotos por nombre del candidato
+// Mapa de fotos por nombre del candidato (Rutas a public/images)
 export const fotosPorNombre = {
-  "Julio Chávez": fotoJulioChavez,
-  "Rafael López Aliaga": fotoRLA,
-  "Keiko Fujimori": fotoKeiko,
-  "César Acuña": fotoAcuna,
-  "Carlos Álvarez": fotoAlvarez,
-  "Alfonso López Chau": fotoLopezChau,
-  "Phillip Butters": fotoButters,
-  "Marisol Pérez Tello": fotoPerezTello,
-  "Norma Yarrow": fotoNormaYarrow,
-  "Norma Yarrow Lumbreras": fotoNormaYarrow,
-  "José Cueto": fotoJoseCueto,
-  "José Cueto Aservi": fotoJoseCueto,
-  "Jorge Montoya": fotoJorgeMontoya,
-  "Jorge Montoya Manrique": fotoJorgeMontoya,
+  "Julio Chávez": "/images/Julio_Chavez.jpg",
+  "Rafael López Aliaga": "/images/rafael_lopez_aliaga.jpg",
+  "Keiko Fujimori": "/images/keiko_fujimori.jpg",
+  "César Acuña": "/images/cesar_acuna.jpg",
+  "Carlos Álvarez": "/images/carlos_alvarez.jpg",
+  "Alfonso López Chau": "/images/alfonso_lopez_chau.jpg",
+  "Phillip Butters": "/images/phillip_butters.jpg",
+  "Marisol Pérez Tello": "/images/marisol_perez_tello.jpg",
+  "Norma Yarrow": "/images/norma_yarrow_lumbreras.jpg",
+  "Norma Yarrow Lumbreras": "/images/norma_yarrow_lumbreras.jpg",
+  "José Cueto": "/images/jose_cueto_aservi.jpg",
+  "José Cueto Aservi": "/images/jose_cueto_aservi.jpg",
+  "Jorge Montoya": "/images/jorge_montoya_manrique.jpg",
+  "Jorge Montoya Manrique": "/images/jorge_montoya_manrique.jpg",
 };
 
-// Mapa de logos por nombre del partido
+// Mapa de logos por nombre del partido (Rutas a public/logos)
+// NOTA: Asegúrate de mover también tu carpeta 'logos' a 'public/'
 export const logosPorPartido = {
-  "Acción Popular": logoAccionPopular,
-  "Renovación Popular": logoRenovacion,
-  "Fuerza Popular": logoFuerza,
-  "Alianza para el Progreso": logoAPP,
-  "País para Todos": logoPaisTodos,
-  "Ahora Nación": logoAhoraNacion,
-  "Avanza País": logoAvanza,
-  "Primero la Gente": logoPrimeroGente,
+  "Acción Popular": "/logos/accion-popular.png",
+  "Renovación Popular": "/logos/renovacion_popular.png",
+  "Fuerza Popular": "/logos/fuerza_popular.png",
+  "Alianza para el Progreso": "/logos/app.png",
+  "País para Todos": "/logos/pais_para_todos.png",
+  "Ahora Nación": "/logos/ahora_nacion.png",
+  "Avanza País": "/logos/avanza_pais.png",
+  "Primero la Gente": "/logos/primero_la_gente.png",
 };
 
 // Función para obtener foto de candidato
@@ -66,11 +48,13 @@ export const getFotoCandidato = (candidato) => {
 
 // Función para obtener logo de partido
 export const getLogoPartido = (partido) => {
+  // Intenta buscar en el mapa local, o usa la constante, o devuelve null
   return logosPorPartido[partido] || LOGOS_PARTIDOS[partido] || null;
 };
 
 // Función para obtener las iniciales del partido para el símbolo
 export const getPartidoSimbolo = (partido) => {
+  if (!partido) return "??";
   const palabras = partido.split(" ");
   if (palabras.length >= 2) {
     return palabras[0][0] + palabras[1][0];
@@ -80,6 +64,7 @@ export const getPartidoSimbolo = (partido) => {
 
 // Función para obtener un color basado en el nombre del partido
 export const getPartidoColor = (partido) => {
+  if (!partido) return "bg-gray-500";
   const colors = [
     "bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500",
     "bg-purple-500", "bg-orange-500", "bg-pink-500", "bg-indigo-500",
@@ -150,4 +135,3 @@ export const mapearCandidatoDesdeBackend = (candidatoBackend, partidosMap) => {
     dni: candidatoBackend.dni || "",
   };
 };
-
